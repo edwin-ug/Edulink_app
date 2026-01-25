@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'signup_screen.dart'; // <--- 1. Import the new screen here
 import 'home_screen.dart';
+import 'main_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -35,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // Fix: Removed 'const' keyword to prevent the error
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => HomeScreen()), 
+          MaterialPageRoute(builder: (context) => MainScreen()), // Point to MainScreen
         );
       }
     } on FirebaseAuthException catch (e) {
