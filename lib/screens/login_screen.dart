@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'signup_screen.dart'; // <--- 1. Import the new screen here
+import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -23,34 +25,31 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      // If successful, we will navigate to Home (Built later)
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login Successful! Welcome back.')),
-      );
+      
+      // If successful, navigate to Home
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Login Successful!')),
+        );
+
+        // Fix: Removed 'const' keyword to prevent the error
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomeScreen()), 
+        );
+      }
     } on FirebaseAuthException catch (e) {
       // If it fails (wrong password, no user), show error
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? 'Login failed'), backgroundColor: Colors.red),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message ?? 'Login failed'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  // Temporary function to create a new user (for testing)
-  Future<void> _handleSignUp() async {
-    try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Account Created! You can now Login.')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-      );
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -101,9 +100,30 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: const Text('LOGIN'),
                   ),
-            TextButton(
-              onPressed: _handleSignUp,
-              child: const Text('No account? Tap here to Register (Test)'),
+            const SizedBox(height: 16),
+            
+            // 2. Updated Registration Link
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text("No account? "),
+                GestureDetector(
+                  onTap: () {
+                    // Navigate to the Signup Screen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const SignupScreen()),
+                    );
+                  },
+                  child: const Text(
+                    "Click here to register",
+                    style: TextStyle(
+                      color: Colors.blue,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
