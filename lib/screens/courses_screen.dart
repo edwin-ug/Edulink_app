@@ -1,9 +1,61 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // 1. Import Firestore
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'course_details_screen.dart';
 
 class CoursesScreen extends StatelessWidget {
   const CoursesScreen({super.key});
+
+  // 1. THE LOGIC: Function to show the popup and save data
+  void _showAddCourseDialog(BuildContext context) {
+    final titleController = TextEditingController();
+    final codeController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Add New Course"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min, // Make the popup just big enough
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(
+                labelText: "Course Title (e.g. Intro to AI)",
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: codeController,
+              decoration: const InputDecoration(
+                labelText: "Course Code (e.g. CS202)",
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context), // Close popup
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              // 2. THE SAVE COMMAND: Write to Firebase
+              if (titleController.text.isNotEmpty && codeController.text.isNotEmpty) {
+                await FirebaseFirestore.instance.collection('courses').add({
+                  'title': titleController.text.trim(),
+                  'code': codeController.text.trim(),
+                  'progress': 0.0, // Start fresh courses at 0%
+                });
+                
+                if (context.mounted) Navigator.pop(context); // Close popup
+              }
+            },
+            child: const Text("Add Course"),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,34 +67,37 @@ class CoursesScreen extends StatelessWidget {
         elevation: 0,
         centerTitle: false,
       ),
-      // 2. USE STREAM BUILDER: This listens to the database live!
+      
+      // 3. THE BUTTON: Floating Action Button
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.blue,
+        child: const Icon(Icons.add, color: Colors.white),
+        onPressed: () => _showAddCourseDialog(context),
+      ),
+
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('courses').snapshots(),
         builder: (context, snapshot) {
-          // A. Handle Errors
-          if (snapshot.hasError) {
-            return const Center(child: Text('Something went wrong'));
-          }
-
-          // B. Handle Loading State
+          if (snapshot.hasError) return const Center(child: Text('Error loading courses'));
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // C. Get the data
           final data = snapshot.requireData;
 
           return ListView.separated(
             padding: const EdgeInsets.all(20),
-            itemCount: data.size, // Count comes from DB
+            itemCount: data.size,
             separatorBuilder: (context, index) => const SizedBox(height: 15),
             itemBuilder: (context, index) {
-              // D. Extract individual course fields
               final course = data.docs[index];
-              final String title = course['title'];
-              final String code = course['code'];
-              // Safely handle numbers (sometimes they come as int or double)
-              final double progress = (course['progress'] as num).toDouble(); 
+              final Map<String, dynamic> courseData = course.data() as Map<String, dynamic>;
+
+              final String title = courseData.containsKey('title') ? courseData['title'] : 'Untitled';
+              final String code = courseData.containsKey('code') ? courseData['code'] : 'N/A';
+              final double progress = courseData.containsKey('progress') 
+                  ? (courseData['progress'] as num).toDouble() 
+                  : 0.0;
 
               return Container(
                 decoration: BoxDecoration(
@@ -67,10 +122,7 @@ class CoursesScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  title: Text(
-                    title,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                  title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -86,7 +138,6 @@ class CoursesScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  // <--- PASTE THIS HERE
                   onTap: () {
                     Navigator.push(
                       context,
@@ -98,7 +149,6 @@ class CoursesScreen extends StatelessWidget {
                       ),
                     );
                   },
-                  // <--- END PASTE
                 ),
               );
             },
