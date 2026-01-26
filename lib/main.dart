@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart'; // 1. Must import Firebase Core
-import 'firebase_options.dart'; // 2. Must import the config file
-import 'screens/login_screen.dart'; // 3. Import your REAL login screen
+import 'firebase_options.dart'; // 2. Import the config file
+import 'screens/login_screen.dart'; // 3. Import the REAL login screen
 
 void main() async {
   // 4. PREPARE THE ENGINE
@@ -34,4 +34,4 @@ class EduLinkApp extends StatelessWidget {
 }
 
 // STOP! Do not add the old "class LoginScreen" here anymore. 
-// It now lives in your 'screens' folder.
+// It now lives in the 'screens' folder.

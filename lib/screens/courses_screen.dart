@@ -91,64 +91,117 @@ class CoursesScreen extends StatelessWidget {
             separatorBuilder: (context, index) => const SizedBox(height: 15),
             itemBuilder: (context, index) {
               final course = data.docs[index];
+              final String docId = course.id; 
+              
               final Map<String, dynamic> courseData = course.data() as Map<String, dynamic>;
-
               final String title = courseData.containsKey('title') ? courseData['title'] : 'Untitled';
               final String code = courseData.containsKey('code') ? courseData['code'] : 'N/A';
-              final double progress = courseData.containsKey('progress') 
-                  ? (courseData['progress'] as num).toDouble() 
-                  : 0.0;
+              final double progress = courseData.containsKey('progress') ? (courseData['progress'] as num).toDouble() : 0.0;
 
-              return Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade200),
+              return Dismissible(
+                key: Key(docId),
+                direction: DismissDirection.endToStart,
+                
+                // 1. CONFIRM DIALOG: This pauses the deletion
+                confirmDismiss: (direction) async {
+                  return await showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: const Text("Delete Course?"),
+                        content: Text("Are you sure you want to delete '$title'? This cannot be undone."),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false), // Return False (Don't Delete)
+                            child: const Text("Cancel"),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(true), // Return True (Delete)
+                            child: const Text("Delete", style: TextStyle(color: Colors.red)),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+
+                // 2. BACKGROUND (Red Trash Can)
+                background: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.delete, color: Colors.white, size: 30),
                 ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(16),
-                  leading: Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Center(
-                      child: Text(
-                        code,
-                        style: TextStyle(
-                            color: Colors.blue.shade800, fontWeight: FontWeight.bold),
-                      ),
-                    ),
+
+                // 3. ACTION: Only runs if user clicked "Delete" in the dialog
+                onDismissed: (direction) async {
+                  await FirebaseFirestore.instance
+                      .collection('courses')
+                      .doc(docId)
+                      .delete();
+
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('$title deleted')),
+                    );
+                  }
+                },
+
+                // 4. THE CARD CONTENT
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade200),
                   ),
-                  title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 8),
-                      Text("Progress: ${(progress * 100).toInt()}%"),
-                      const SizedBox(height: 5),
-                      LinearProgressIndicator(
-                        value: progress,
-                        backgroundColor: Colors.grey.shade100,
-                        color: Colors.blue,
-                        minHeight: 6,
-                        borderRadius: BorderRadius.circular(10),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(16),
+                    leading: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                    ],
-                  ),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CourseDetailsScreen(
-                          title: title,
-                          code: code,
+                      child: Center(
+                        child: Text(
+                          code,
+                          style: TextStyle(
+                              color: Colors.blue.shade800, fontWeight: FontWeight.bold),
                         ),
                       ),
-                    );
-                  },
+                    ),
+                    title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 8),
+                        Text("Progress: ${(progress * 100).toInt()}%"),
+                        const SizedBox(height: 5),
+                        LinearProgressIndicator(
+                          value: progress,
+                          backgroundColor: Colors.grey.shade100,
+                          color: Colors.blue,
+                          minHeight: 6,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ],
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CourseDetailsScreen(
+                            title: title,
+                            code: code,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               );
             },
