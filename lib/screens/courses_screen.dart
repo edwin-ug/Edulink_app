@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // 1. Import Firestore
+import 'course_details_screen.dart';
 
 class CoursesScreen extends StatelessWidget {
   const CoursesScreen({super.key});
@@ -85,6 +86,19 @@ class CoursesScreen extends StatelessWidget {
                       ),
                     ],
                   ),
+                  // <--- PASTE THIS HERE
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CourseDetailsScreen(
+                          title: title,
+                          code: code,
+                        ),
+                      ),
+                    );
+                  },
+                  // <--- END PASTE
                 ),
               );
             },
