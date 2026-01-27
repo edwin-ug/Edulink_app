@@ -197,6 +197,7 @@ class CoursesScreen extends StatelessWidget {
                           builder: (context) => CourseDetailsScreen(
                             title: title,
                             code: code,
+                            courseId: docId, // <--- ADD THIS LINE (Passes the ID)
                           ),
                         ),
                       );
