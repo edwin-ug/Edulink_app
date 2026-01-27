@@ -1,17 +1,74 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CourseDetailsScreen extends StatelessWidget {
   final String title;
   final String code;
-  final String courseId; // 1. New Variable
+  final String courseId; // We need this ID to know WHERE to save the lesson
 
   const CourseDetailsScreen({
     super.key,
     required this.title,
     required this.code,
-    required this.courseId, // 2. Require it
+    required this.courseId,
   });
+
+  // 1. THE LOGIC: Function to add a lesson to THIS specific course
+  void _showAddLessonDialog(BuildContext context) {
+    final titleController = TextEditingController();
+    final durationController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Add New Lesson"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(
+                labelText: "Lesson Title (e.g. Intro to Widgets)",
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: durationController,
+              decoration: const InputDecoration(
+                labelText: "Duration (e.g. 10 min)",
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (titleController.text.isNotEmpty) {
+                // 2. THE SAVE COMMAND: Note the path!
+                // courses -> [courseId] -> lessons -> [new document]
+                await FirebaseFirestore.instance
+                    .collection('courses')
+                    .doc(courseId) // Use the ID passed from the previous screen
+                    .collection('lessons')
+                    .add({
+                  'title': titleController.text.trim(),
+                  'duration': durationController.text.trim(),
+                  'order': DateTime.now().millisecondsSinceEpoch, // Simple way to sort by time added
+                });
+
+                if (context.mounted) Navigator.pop(context);
+              }
+            },
+            child: const Text("Add Lesson"),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,9 +80,17 @@ class CourseDetailsScreen extends StatelessWidget {
         elevation: 0,
         foregroundColor: Colors.black,
       ),
+      
+      // 3. THE BUTTON
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.deepPurple, // Different color to distinguish from Course add
+        child: const Icon(Icons.add, color: Colors.white),
+        onPressed: () => _showAddLessonDialog(context),
+      ),
+
       body: Column(
         children: [
-          // HEADER (Static Info)
+          // Header Area
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(24),
@@ -61,15 +126,14 @@ class CourseDetailsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 10),
 
-          // LIST OF LESSONS (Dynamic Stream)
+          // Lesson List
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              // 3. LISTEN TO SUB-COLLECTION: courses -> [ID] -> lessons
               stream: FirebaseFirestore.instance
                   .collection('courses')
                   .doc(courseId)
                   .collection('lessons')
-                  .orderBy('order') // Sort by the 'order' field (1, 2, 3...)
+                  .orderBy('order')
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) return const Center(child: Text("Error loading lessons"));
@@ -79,9 +143,8 @@ class CourseDetailsScreen extends StatelessWidget {
 
                 final data = snapshot.requireData;
 
-                // Handle empty courses
                 if (data.size == 0) {
-                  return const Center(child: Text("No lessons added yet."));
+                  return const Center(child: Text("No lessons added yet. Tap + to start."));
                 }
 
                 return ListView.builder(
@@ -109,9 +172,6 @@ class CourseDetailsScreen extends StatelessWidget {
                         title: Text(lessonData['title'] ?? "Untitled Lesson"),
                         subtitle: Text(lessonData['duration'] ?? "Unknown duration"),
                         trailing: const Icon(Icons.play_circle_outline, color: Colors.grey),
-                        onTap: () {
-                           // Future: Open video player
-                        },
                       ),
                     );
                   },
