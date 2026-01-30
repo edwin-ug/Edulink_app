@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'lesson_player_screen.dart';
 
 class CourseDetailsScreen extends StatelessWidget {
   final String title;
@@ -17,6 +18,7 @@ class CourseDetailsScreen extends StatelessWidget {
   void _showAddLessonDialog(BuildContext context) {
     final titleController = TextEditingController();
     final durationController = TextEditingController();
+    final urlController = TextEditingController(); // 1. NEW CONTROLLER
 
     showDialog(
       context: context,
@@ -27,15 +29,19 @@ class CourseDetailsScreen extends StatelessWidget {
           children: [
             TextField(
               controller: titleController,
-              decoration: const InputDecoration(
-                labelText: "Lesson Title (e.g. Intro to Widgets)",
-              ),
+              decoration: const InputDecoration(labelText: "Lesson Title"),
             ),
-            const SizedBox(height: 10),
             TextField(
               controller: durationController,
+              decoration: const InputDecoration(labelText: "Duration"),
+            ),
+            const SizedBox(height: 10),
+            // 2. NEW TEXT FIELD
+            TextField(
+              controller: urlController,
               decoration: const InputDecoration(
-                labelText: "Duration (e.g. 10 min)",
+                labelText: "YouTube URL",
+                hintText: "https://youtu.be/..."
               ),
             ),
           ],
@@ -48,16 +54,15 @@ class CourseDetailsScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () async {
               if (titleController.text.isNotEmpty) {
-                // 2. THE SAVE COMMAND: Note the path!
-                // courses -> [courseId] -> lessons -> [new document]
                 await FirebaseFirestore.instance
                     .collection('courses')
-                    .doc(courseId) // Use the ID passed from the previous screen
+                    .doc(courseId)
                     .collection('lessons')
                     .add({
                   'title': titleController.text.trim(),
                   'duration': durationController.text.trim(),
-                  'order': DateTime.now().millisecondsSinceEpoch, // Simple way to sort by time added
+                  'videoUrl': urlController.text.trim(), // 3. SAVE THE URL
+                  'order': DateTime.now().millisecondsSinceEpoch,
                 });
 
                 if (context.mounted) Navigator.pop(context);
@@ -68,6 +73,32 @@ class CourseDetailsScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // 2. THE MATH LOGIC
+  Future<void> _updateCourseProgress() async {
+    // A. Get all lessons for this course
+    final allLessons = await FirebaseFirestore.instance
+        .collection('courses')
+        .doc(courseId)
+        .collection('lessons')
+        .get();
+
+    final totalLessons = allLessons.docs.length;
+    
+    // B. Count how many are marked 'isCompleted'
+    final completedLessons = allLessons.docs
+        .where((doc) => doc.data().containsKey('isCompleted') && doc['isCompleted'] == true)
+        .length;
+
+    // C. Calculate Percentage (Avoid dividing by zero!)
+    final double newProgress = totalLessons == 0 ? 0 : completedLessons / totalLessons;
+
+    // D. Update the Main Course Document
+    await FirebaseFirestore.instance
+        .collection('courses')
+        .doc(courseId)
+        .update({'progress': newProgress});
   }
 
   @override
@@ -153,6 +184,11 @@ class CourseDetailsScreen extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final lesson = data.docs[index];
                     final lessonData = lesson.data() as Map<String, dynamic>;
+                    
+                    // Safely get the URL (default to empty string if missing)
+                    final String videoUrl = lessonData.containsKey('videoUrl') 
+                        ? lessonData['videoUrl'] 
+                        : "";
 
                     return Card(
                       margin: const EdgeInsets.only(bottom: 10),
@@ -162,16 +198,59 @@ class CourseDetailsScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.blue.shade50,
-                          child: Text(
-                            "${index + 1}",
-                            style: TextStyle(color: Colors.blue.shade800),
+                        // 1. LEADING: The Checkbox
+                        leading: Checkbox(
+                          value: lessonData['isCompleted'] ?? false, // Default to false
+                          activeColor: Colors.deepPurple,
+                          onChanged: (bool? newValue) async {
+                            // A. Update the specific lesson
+                            await FirebaseFirestore.instance
+                                .collection('courses')
+                                .doc(courseId)
+                                .collection('lessons')
+                                .doc(lesson.id)
+                                .update({'isCompleted': newValue});
+
+                            // B. Run the Math to update the Course Progress
+                            await _updateCourseProgress();
+                          },
+                        ),
+                        
+                        // 2. TITLE & DURATION
+                        title: Text(
+                          lessonData['title'] ?? "Untitled",
+                          style: TextStyle(
+                            decoration: (lessonData['isCompleted'] ?? false)
+                                ? TextDecoration.lineThrough // Cross out text if done
+                                : TextDecoration.none,
+                            color: (lessonData['isCompleted'] ?? false)
+                                ? Colors.grey
+                                : Colors.black,
                           ),
                         ),
-                        title: Text(lessonData['title'] ?? "Untitled Lesson"),
-                        subtitle: Text(lessonData['duration'] ?? "Unknown duration"),
-                        trailing: const Icon(Icons.play_circle_outline, color: Colors.grey),
+                        subtitle: Text(lessonData['duration'] ?? "N/A"),
+                        
+                        // 3. TRAILING: The Play Button
+                        trailing: IconButton(
+                          icon: const Icon(Icons.play_circle_fill, color: Colors.red),
+                          onPressed: () {
+                             if (videoUrl.isNotEmpty) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => LessonPlayerScreen(
+                                    title: lessonData['title'] ?? "Lesson",
+                                    videoUrl: videoUrl,
+                                  ),
+                                ),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("No video added")),
+                              );
+                            }
+                          },
+                        ),
                       ),
                     );
                   },
