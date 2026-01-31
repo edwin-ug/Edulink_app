@@ -1,4 +1,4 @@
-# 📚 EduLink - Mobile Learning Management System
+# EduLink - Mobile Learning Management System
 
 A full-stack mobile application built with **Flutter** and **Firebase** that allows users to enroll in courses, watch video lessons, track their progress, and manage their student profile.
 
@@ -6,7 +6,7 @@ Designed and built by **Edwin Komagum**.
 
 ---
 
-## 📱 Screenshots
+## Screenshots
 
 | Home Screen | Course Details | Video Player | Profile |
 |:---:|:---:|:---:|:---:|
@@ -16,14 +16,14 @@ Designed and built by **Edwin Komagum**.
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
-* **🔐 Secure Authentication:** Email/Password login and registration using Firebase Auth.
-* **📂 Dynamic Content:** Courses and lessons are fetched in real-time from Cloud Firestore.
-* **📺 Video Integration:** Integrated YouTube player for seamless lesson playback inside the app.
-* **✅ Progress Tracking:** Interactive checkboxes that auto-calculate and update course completion status (0-100%).
-* **📸 Profile Management:** Users can upload profile pictures directly from their device gallery to Firebase Storage.
-* **☁️ Cloud Sync:** All data (progress, user details, courses) is synced across devices.
+* **Secure Authentication:** Email/Password login and registration using Firebase Auth.
+* **Dynamic Content:** Courses and lessons are fetched in real-time from Cloud Firestore.
+* **Video Integration:** Integrated YouTube player for seamless lesson playback inside the app.
+* **Progress Tracking:** Interactive checkboxes that auto-calculate and update course completion status (0-100%).
+* **Profile Management:** Users can upload profile pictures directly from their device gallery to Firebase Storage.
+* **Cloud Sync:** All data (progress, user details, courses) is synced across devices.
 
 ---
 
@@ -43,8 +43,7 @@ This project uses Firebase. To run it locally, you will need your own `google-se
 
 1.  **Clone the repo:**
     ```bash
-    git clone [https://github.com/edwin-ug/Edulink_app.git](https://github.com/edwin-ug/Edulink_app.git)
-    cd EduLink
+    git clone https://github.com/edwin-ug/Edulink_app.git
     ```
 
 2.  **Install Dependencies:**
